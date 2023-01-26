@@ -11,7 +11,13 @@ pub struct Planet {
 
 impl Planet {
     pub fn new(coords: (f64, f64), r: f64, velocity: (f64, f64), m: f64, name: String) -> Self {
-        Self { coords, r, velocity, m, name }
+        Self {
+            coords,
+            r,
+            velocity,
+            m,
+            name,
+        }
     }
 
     pub fn update_coords(&mut self, dt: f64) {
