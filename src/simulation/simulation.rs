@@ -1,21 +1,11 @@
-use crate::simulation::planet::{Planet, G};
+use crate::{
+    simulation::planet::{Planet, G},
+    utils::pair::Pair,
+};
 
 pub struct Simulation {
     pub planets: Vec<Planet>,
 }
-
-// #[macro_export]
-// macro_rules! sim {
-//     ( $( $x:expr ),* ) => {
-//         {
-//             let mut temp_vec = Vec::new();
-//             $(
-//                 temp_vec.push(Planet::new($x));
-//             )*
-//             Simulation {planets : temp_vec}
-//         }
-//     };
-// }
 
 impl Simulation {
     #[allow(dead_code)]
@@ -63,5 +53,15 @@ impl Simulation {
 
     pub fn get_planets(&mut self) -> &mut Vec<Planet> {
         &mut self.planets
+    }
+
+    pub fn get_planet_at_pos(&self, pos: Pair<f64>) -> Option<usize> {
+        for (index, planet) in self.planets.iter().enumerate() {
+            let dist = pos - planet.coords.into();
+            if dist.x * dist.x + dist.y * dist.y < planet.r * planet.r {
+                return Some(index);
+            }
+        }
+        None
     }
 }

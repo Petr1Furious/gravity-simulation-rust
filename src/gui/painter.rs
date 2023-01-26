@@ -4,37 +4,11 @@ use piston::{RenderArgs, UpdateArgs};
 use crate::simulation::simulation::Simulation;
 use crate::utils::pair::Pair;
 
-struct Shift {
-    current: Pair<f64>,
-    old: Pair<f64>,
-    future: Pair<f64>,
-    t: f64,
-}
-
-impl Shift {
-
-    fn update(&mut self, dt: f64) {
-
-        const SPEED: f64 = 5.0;
-
-        self.current = self.old * (1.0 - self.t) + self.future * self.t;
-        self.t = (self.t + dt * SPEED).min(1.0);
-    }
-
-    fn new(base_shift: Pair<f64>) -> Self {
-        Self {
-            current: base_shift,
-            old: base_shift,
-            future: base_shift,
-            t: 1.0,
-        }
-    }
-}
-
 pub struct Painter {
     gl: GlGraphics,
     sim: Simulation,
-    shift: Shift,
+    shift: Pair<f64>,
+    planet_offset_index: Option<usize>,
 }
 
 impl Painter {
@@ -42,7 +16,8 @@ impl Painter {
         Painter {
             gl: GlGraphics::new(opengl),
             sim,
-            shift: Shift::new(Into::<Pair<f64>>::into(size) * 0.5),
+            shift: Into::<Pair<f64>>::into(size) * 0.5,
+            planet_offset_index: None,
         }
     }
 
@@ -52,18 +27,19 @@ impl Painter {
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
+        let planet_offset = self.planet_coords(self.planet_offset_index);
+
         self.gl.draw(args.viewport(), |c, gl| {
             clear(BLACK, gl);
 
             for planet in self.sim.get_planets() {
                 let square = rectangle::square(0.0, 0.0, 2.0 * planet.r);
+                let pos = self.shift + planet.coords.into() + (-planet.r, -planet.r).into() - planet_offset;
                 let transform = c
                     .transform
                     .trans(
-                        self.shift.current.x + planet.coords.0,
-                        self.shift.current.y + planet.coords.1,
-                    )
-                    .trans(-planet.r, -planet.r);
+                        pos.x, pos.y
+                    );
                 ellipse(WHITE, square, transform, gl);
             }
         })
@@ -71,12 +47,32 @@ impl Painter {
 
     pub fn update(&mut self, args: &UpdateArgs) {
         self.sim.update(args.dt);
-        self.shift.update(args.dt);
     }
 
-    pub fn shift_update(&mut self, new_shift: (f64, f64)) {
-        self.shift.old = self.shift.current;
-        self.shift.future = new_shift.into();
-        self.shift.t = 0.0;
+    pub fn shift_update(&mut self, new_shift: Pair<f64>) {
+        self.shift = new_shift.into();
+    }
+
+    pub fn get_shift(&self) -> Pair<f64> {
+        self.shift
+    }
+
+    pub fn get_object_at_point(&mut self, point: Pair<f64>) -> Option<usize> {
+        self.sim.get_planet_at_pos(point - self.shift + self.planet_coords(self.planet_offset_index))
+    }
+
+    fn planet_coords(&self, index: Option<usize>) -> Pair<f64> {
+        match index {
+            None => Pair::default(),
+            Some(index) => self.sim.planets[index].coords.into()
+        }
+    }
+
+    pub fn planet_offset_update(&mut self, index: usize) {
+        let old_offset = self.planet_coords(self.planet_offset_index);
+        self.planet_offset_index = Some(index);
+        let new_offset = self.planet_coords(self.planet_offset_index);
+
+        self.shift_update(self.get_shift() + new_offset - old_offset);
     }
 }

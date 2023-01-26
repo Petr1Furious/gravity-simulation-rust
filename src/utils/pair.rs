@@ -1,22 +1,40 @@
 use std::marker::Copy;
-use std::ops::{Add, Mul};
+use std::ops::{Add, AddAssign, Mul, Sub};
 
-#[derive(Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Pair<T> {
     pub x: T,
     pub y: T,
 }
 
-impl<T: Add<Output = T>> Add for Pair<T>
-where
-    T: Copy,
-{
+impl<T: Add<Output = T>> Add for Pair<T> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
         Pair {
             x: self.x + other.x,
             y: self.y + other.y,
+        }
+    }
+}
+
+impl<T> AddAssign for Pair<T>
+where
+    T: AddAssign<T>,
+{
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+    }
+}
+
+impl<T: Sub<Output = T>> Sub for Pair<T> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        Pair {
+            x: self.x - other.x,
+            y: self.y - other.y,
         }
     }
 }
